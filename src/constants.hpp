@@ -316,9 +316,10 @@ inline constexpr unsigned long btModulePairingPulse    = 500;
 
 // ######################################################################
 
-/* uncomment the below line to enable battery voltage measurement (not for ALLinONE, not recommended for TonUINO_Classic)
- * um die Batterie Spannungsmessung zu aktivieren, in der nächste Zeile den Kommentar entfernen
- * (nicht für ALLinONE, nicht empfohlen für TonUINO_Classic)
+/* uncomment the below line to enable battery voltage measurement (not for
+ * ALLinONE, not recommended for TonUINO_Classic) um die Batterie
+ * Spannungsmessung zu aktivieren, in der nächste Zeile den Kommentar entfernen
+ * (nicht für ALLinONE, nicht empfohlen for TonUINO_Classic)
  */
 //#define BAT_VOLTAGE_MEASUREMENT
 

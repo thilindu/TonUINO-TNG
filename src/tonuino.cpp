@@ -313,20 +313,20 @@ void Tonuino::playFolder() {
   switch (myFolder.mode) {
 
   case pmode_t::hoerspiel:
-    // Hörspielmodus: eine zufällige Datei aus dem Ordner
+    // Audio drama mode: one random file from the folder
     myFolder.special = 1;
     myFolder.special2 = numTracksInFolder;
     __attribute__ ((fallthrough));
     /* no break */
   case pmode_t::hoerspiel_vb:
-    // Spezialmodus Von-Bin: Hörspiel: eine zufällige Datei aus dem Ordner
-    LOG(play_log, s_debug, F("Hörspiel"));
+    // Special mode From-To: Audio drama: one random file from the folder
+    LOG(play_log, s_debug, F("Audio Drama"));
     LOG(play_log, s_debug, myFolder.special, str_bis(), myFolder.special2);
     mp3.enqueueTrack(myFolder.folder, random(myFolder.special, myFolder.special2 + 1));
     break;
 
   case pmode_t::album:
-    // Album Modus: kompletten Ordner spielen
+    // Album mode: play complete folder
     myFolder.special = 1;
     myFolder.special2 = numTracksInFolder;
     __attribute__ ((fallthrough));
@@ -339,13 +339,13 @@ void Tonuino::playFolder() {
     break;
 
   case pmode_t::party:
-    // Party Modus: Ordner in zufälliger Reihenfolge
+    // Party mode: folder in random order
     myFolder.special = 1;
     myFolder.special2 = numTracksInFolder;
     __attribute__ ((fallthrough));
     /* no break */
   case pmode_t::party_vb:
-    // Spezialmodus Von-Bis: Party Ordner in zufälliger Reihenfolge
+    // Special mode From-To: Party folder in random order
     LOG(play_log, s_debug, F("Party"));
     LOG(play_log, s_debug, myFolder.special, str_bis(), myFolder.special2);
     mp3.enqueueTrack(myFolder.folder, myFolder.special, myFolder.special2);
@@ -362,8 +362,9 @@ void Tonuino::playFolder() {
   case pmode_t::hoerbuch:
   case pmode_t::hoerbuch_1:
   {
-    // Hörbuch Modus: kompletten Ordner spielen und Fortschritt merken (oder nur eine Datei)
-    LOG(play_log, s_debug, F("Hörbuch"));
+    // Audiobook mode: play complete folder and remember progress (or just one
+    // file)
+    LOG(play_log, s_debug, F("Audiobook"));
     uint16_t startTrack = settings.readFolderSettingFromFlash(myFolder.folder);
     if ((startTrack == 0) || (startTrack > numTracksInFolder))
       startTrack = 1;
@@ -387,8 +388,8 @@ void Tonuino::playTrackNumber () {
     mp3.playAdvertisement(advertTrack);
 }
 
-
-// Leider kann das Modul selbst keine Queue abspielen, daher müssen wir selbst die Queue verwalten
+// Unfortunately, the module itself cannot play a queue, so we have to manage
+// the queue ourselves
 void Tonuino::nextTrack(uint8_t tracks, bool fromOnPlayFinished) {
   LOG(play_log, s_debug, F("nextTrack"));
   if (fromOnPlayFinished && mp3.isPlayingFolder() && (myFolder.mode == pmode_t::hoerbuch || myFolder.mode == pmode_t::hoerbuch_1)) {
