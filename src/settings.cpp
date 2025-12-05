@@ -77,7 +77,7 @@ void Settings::resetSettings() {
   adminMenuPin[1]      =  1;
   adminMenuPin[2]      =  1;
   adminMenuPin[3]      =  1;
-  pauseWhenCardRemoved =  0;
+  pauseWhenCardRemoved = 1;
   hpMaxVolume          = 25;
   hpMinVolume          =  5;
   hpInitVolume         = 15;
