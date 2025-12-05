@@ -420,14 +420,23 @@ class TonUINOContentManager:
     
     def delete_selected_content(self):
         """Delete selected content from both filesystem and database"""
+        self.log("Delete button clicked", "INFO")
+        
         selection = self.content_tree.selection()
         if not selection:
+            self.log("No item selected", "WARNING")
             messagebox.showwarning("No Selection", "Please select content to delete")
             return
         
+        self.log(f"Selection: {selection}", "INFO")
+        
         item = self.content_tree.item(selection[0])
-        folder_num = item['values'][0]
+        self.log(f"Item data: {item}", "INFO")
+        
+        folder_num = str(item['values'][0])  # Ensure it's a string
         name = item['text']
+        
+        self.log(f"Folder: {folder_num}, Name: {name}", "INFO")
         
         result = messagebox.askyesno(
             "Confirm Delete",
@@ -443,15 +452,23 @@ class TonUINOContentManager:
             # Delete folder
             sd_dir = Path(self.sd_dir_path.get())
             folder_path = sd_dir / folder_num
+            
+            self.log(f"Attempting to delete: {folder_path}", "INFO")
+            
             if folder_path.exists():
+                self.log(f"Folder exists, deleting...", "INFO")
                 shutil.rmtree(folder_path)
-                self.log(f"Deleted folder {folder_num}", "SUCCESS")
+                self.log(f"Deleted folder {folder_num} from filesystem", "SUCCESS")
+            else:
+                self.log(f"Folder {folder_path} does not exist", "WARNING")
             
             # Remove from database
             if folder_num in self.audio_database:
                 del self.audio_database[folder_num]
                 self.save_database()
                 self.log(f"Removed {folder_num} from database", "SUCCESS")
+            else:
+                self.log(f"Folder {folder_num} not found in database", "WARNING")
             
             # Refresh display
             self.refresh_content_list()
