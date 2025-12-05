@@ -2,6 +2,43 @@
 
 Tools for managing and maintaining your TonUINO audio content.
 
+---
+
+## 🎉 New Features
+
+### Enhanced GUI Experience
+Our graphical interface now includes powerful features to make content management effortless:
+
+- **🎨 Modern Interface** - Clean, intuitive design with real-time feedback
+- **🔄 Auto-Detection** - Automatically finds the next available folder number
+- **📝 Smart Naming** - Auto-fills content names from folder/file names
+- **📊 Live Logging** - Color-coded progress messages with emojis for easy tracking
+  - ✅ Success messages in green
+  - ❌ Errors in red
+  - ⚠️ Warnings in orange
+  - ℹ️ Info messages in black
+- **🎯 Validation** - Real-time input validation prevents common mistakes
+- **💾 CSV Auto-Update** - Automatically maintains media-list.csv
+- **🔀 Flexible Paths** - Choose custom SD card locations on-the-fly
+- **🎵 Multi-Type Support** - Handles audiobooks, albums, stories, and singles
+
+### CLI Enhancements
+The command-line tool now supports:
+
+- **🚀 Batch Processing** - Process multiple files/folders in sequence
+- **🎨 Color Output** - Better visual feedback with color-coded messages
+- **🔧 Custom Configuration** - Override default paths and settings
+- **📋 Detailed Logging** - Verbose output for troubleshooting
+
+### TTS Improvements
+Text-to-speech tools have been enhanced with:
+
+- **🌍 Multi-Language Support** - German, English, and French
+- **🎤 Quality Options** - Choose voice quality and speech rate
+- **📦 Batch Generation** - Generate all messages at once
+
+---
+
 ## Available Tools
 
 ### 1. 🎨 Audio Content Manager - GUI (Recommended)
