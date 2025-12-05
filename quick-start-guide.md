@@ -1,5 +1,89 @@
 # TonUINO-TNG Control Reference Guide
 
+## SD Card Setup
+
+### SD Card Structure
+
+The SD card must have the following structure:
+
+```
+SD Card Root/
+├── mp3/           (system voice prompts - required)
+├── advert/        (modifier announcements - required)
+├── 01/            (your content folder 1)
+│   ├── 0001.mp3
+│   ├── 0002.mp3
+│   └── ...
+├── 02/            (your content folder 2)
+│   ├── 0001.mp3
+│   └── ...
+├── 03/            (your content folder 3)
+└── ...            (up to folder 99)
+```
+
+### Adding Your Audio Content
+
+#### Step 1: Download System Files
+
+Download the pre-configured system audio files from:  
+[tonuino.github.io/TonUINO-TNG/sd-card.zip](https://tonuino.github.io/TonUINO-TNG/sd-card.zip)
+
+Extract and copy the `mp3/` and `advert/` folders to your SD card root.
+
+#### Step 2: Create Content Folders
+
+1. Create numbered folders on your SD card: `01/`, `02/`, `03/`, etc. (up to `99/`)
+2. Each folder can contain your music, stories, or audiobooks
+
+#### Step 3: Add MP3 Files
+
+**CRITICAL: File Naming Convention**
+
+All MP3 files MUST use 4-digit zero-padded numbering:
+
+✅ **CORRECT:**
+- `0001.mp3`, `0002.mp3`, `0010.mp3`, `0099.mp3`, `0255.mp3`
+
+❌ **WRONG:**
+- `1.mp3`, `01.mp3`, `song.mp3`, `track_01.mp3`
+
+**Examples:**
+
+```
+01/               (Folder for Album 1)
+├── 0001.mp3     (Track 1)
+├── 0002.mp3     (Track 2)
+└── 0003.mp3     (Track 3)
+
+02/               (Folder for Audiobook)
+├── 0001.mp3     (Chapter 1)
+├── 0002.mp3     (Chapter 2)
+└── 0003.mp3     (Chapter 3)
+
+03/               (Folder for Stories)
+├── 0001.mp3
+├── 0002.mp3
+└── 0003.mp3
+```
+
+#### Language-Specific System Files
+
+The repository includes pre-generated system audio in multiple languages:
+- `sd-card-german/` - German voice prompts
+- `sd-card-englisch/` - English voice prompts
+- `sd-card-french/` - French voice prompts (if available)
+
+Copy the appropriate language version to your SD card.
+
+### System Audio Files Reference
+
+- **`mp3/` folder** - System voice prompts for menu navigation, setup wizard, and instructions
+- **`advert/` folder** - Modifier card announcements (freeze dance, sleep timer, etc.)
+
+These folders contain 250+ pre-numbered system messages. Do not modify or remove these files unless you're creating custom voice prompts.
+
+---
+
 ## Hardware Configuration
 
 ### Standard 3-Button Setup
