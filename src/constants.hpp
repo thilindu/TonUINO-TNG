@@ -73,7 +73,7 @@
 /* Select the right PCB by uncommenting one of the following lines
  * Bitte die passende Platine durch entfernen der Kommentare in einer der folgenden Zeilen auswählen
  */
-//#define TonUINO_Classic
+#define TonUINO_Classic
 //#define TonUINO_Every
 //#define TonUINO_Every_4808
 //#define ALLinONE
@@ -89,7 +89,7 @@
  * default: THREEBUTTONS for classic/every
  *          FIVEBUTTONS  for AiO and AiO+
  */
-//#define THREEBUTTONS
+#define THREEBUTTONS
 //#define FIVEBUTTONS
 //#define BUTTONS3X3
 
@@ -252,7 +252,7 @@ inline constexpr levelType     dfPlayer_noHeadphoneJackDetectType = levelType::a
  * um die Wiedergabe fortzusetzen, wenn die selbe RFID erkannt wird, die bereits
  * abgespielt wird, in der nächste Zeile den Kommentar entfernen
  */
-//#define RESUME_ON_SAME_RFID
+#define RESUME_ON_SAME_RFID
 
 /* uncomment the below line to replay the last card or short cut if pressed play/pause
  * in Idle state
