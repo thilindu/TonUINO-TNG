@@ -41,7 +41,7 @@ Text-to-speech tools have been enhanced with:
 
 ## Available Tools
 
-### 1. 🎨 Audio Content Manager - GUI (Recommended)
+### 1. 🎨 Audio Content Manager - GUI
 
 **Graphical interface for easy content management**
 
@@ -51,35 +51,20 @@ Text-to-speech tools have been enhanced with:
 
 **Features:**
 - ✅ User-friendly graphical interface
+- ✅ Browse existing content with sync status
 - ✅ File/folder browser
 - ✅ Auto-numbering and validation
 - ✅ Real-time log viewer
+- ✅ Hash-based integrity tracking
 - ✅ No external dependencies
+- ✅ Single JSON database (.tonuino_hash.json)
 
 📖 **Documentation:** [README_gui.md](README_gui.md)  
 ⚡ **Quick Start:** [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
 
 ---
 
-### 2. 📟 Audio Content Manager - CLI
-
-**Command-line script for automation and scripting**
-
-```bash
-./add_audio_content.sh --type audiobook --content "/path/to/folder" --name "Content Name"
-```
-
-**Features:**
-- ✅ Full automation support
-- ✅ Batch processing friendly
-- ✅ Color-coded output
-- ✅ Shell scripting integration
-
-📖 **Documentation:** [README_add_audio_content.md](README_add_audio_content.md)
-
----
-
-### 3. 🎤 Text-to-Speech Tools
+### 2. 🎤 Text-to-Speech Tools
 
 **Generate custom voice prompts for TonUINO**
 
@@ -105,86 +90,68 @@ Add lead-in messages to audio files.
 
 ## Quick Start Guide
 
-### For Beginners: Use the GUI
+### Use the GUI
 
 ```bash
 cd tools
 ./launch_gui.sh
 ```
 
-1. Click "Browse Folder" to select your content
-2. Enter a name
-3. Select content type (audiobook/album/story/single)
-4. Click "Add Content"
-
-### For Power Users: Use the CLI
-
-```bash
-./add_audio_content.sh \
-  --type audiobook \
-  --content "/path/to/audiobook" \
-  --name "Harry Potter Book 1"
-```
-
-### For Automation: Script It
-
-```bash
-#!/bin/bash
-for dir in /audiobooks/*; do
-  ./add_audio_content.sh \
-    --type audiobook \
-    --content "$dir" \
-    --name "$(basename "$dir")"
-done
-```
+1. Browse existing content in the top panel
+2. Click "Browse Folder" to select your content
+3. Enter a name
+4. Select content type (audiobook/album/story/single)
+5. Click "Add Content"
 
 ---
 
 ## Tool Comparison
 
-| Feature | GUI | CLI | TTS Tools |
-|---------|-----|-----|-----------|
-| **Ease of Use** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
-| **Automation** | ⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **Visual Feedback** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
-| **Scripting Support** | ⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **Batch Processing** | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Learning Curve** | Low | Medium | High |
+| Feature | GUI | TTS Tools |
+|---------|-----|-----------|
+| **Ease of Use** | ⭐⭐⭐⭐⭐ | ⭐⭐ |
+| **Content Browser** | ⭐⭐⭐⭐⭐ | ⭐ |
+| **Visual Feedback** | ⭐⭐⭐⭐⭐ | ⭐⭐ |
+| **Batch Processing** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| **Learning Curve** | Low | High |
 
 **Recommendation:**
-- **First-time users**: Use GUI
-- **Regular management**: Use GUI or CLI
-- **Bulk imports**: Use CLI
+- **All content management**: Use GUI
 - **Custom voices**: Use TTS tools
 
 ---
 
 ## Common Workflows
 
-### Workflow 1: Add New Audiobook (GUI)
+### Workflow 1: Add New Audiobook
 
 1. Launch GUI: `./launch_gui.sh`
-2. Browse to audiobook folder
-3. Enter name: "Harry Potter and the Philosopher's Stone"
-4. Type: Audiobook
-5. Click "Add Content"
-6. Copy to SD card
-7. Create RFID card on TonUINO
+2. Check existing content in top panel
+3. Browse to audiobook folder
+4. Enter name: "Harry Potter and the Philosopher's Stone"
+5. Type: Audiobook
+6. Click "Add Content"
+7. Content appears in the list with ✅ Synced status
 
-### Workflow 2: Batch Import Albums (CLI)
+### Workflow 2: Verify Content Integrity
 
-```bash
-#!/bin/bash
-for album in /music/albums/*; do
-  ./add_audio_content.sh \
-    --type album \
-    --content "$album" \
-    --name "$(basename "$album")"
-  sleep 1
-done
-```
+1. Launch GUI
+2. View sync status for all folders:
+   - ✅ Synced: Everything OK
+   - ⚠️ Modified: Files changed
+   - ❌ Not in DB: Missing from database
+3. Click "Verify Sync" for detailed check
+4. Fix any issues as needed
 
-### Workflow 3: Create Custom Language Pack (TTS)
+### Workflow 3: Delete Content
+
+1. Launch GUI
+2. Select content from list
+3. Click "Delete Selected"
+4. Confirm deletion
+5. Content removed from filesystem and database
+
+### Workflow 4: Create Custom Language Pack (TTS)
 
 1. Create/edit `audio_messages_xx.txt`
 2. Run `python3 create_audio_messages.py`
@@ -242,12 +209,10 @@ tools/
 ├── README.md                          # This file
 ├── QUICK_REFERENCE.md                 # Quick reference card
 │
-├── Audio Content Managers
+├── Audio Content Manager
 ├── launch_gui.sh                      # GUI launcher
 ├── audio_content_gui.py               # GUI application
 ├── README_gui.md                      # GUI documentation
-├── add_audio_content.sh               # CLI script
-├── README_add_audio_content.md        # CLI documentation
 │
 └── Text-to-Speech Tools
     ├── create_audio_messages.py       # Generate audio from text
@@ -259,19 +224,18 @@ tools/
 
 ## What These Tools Do
 
-### Content Management Tools
+### Database Files
+- **Content Browser** - See all content at a glance with status indicators
+- **Integrity Checking** - Hash-based verification detects file changes
+- **Single Database** - `.tonuino_hash.json` stores all content metadata and hashes
 
-**Problem:** Manually adding audio files is tedious
-- Need to create folders (01, 02, 03...)
-- Need to rename files (0001.mp3, 0002.mp3...)
-- Need to update CSV file
-- Easy to make mistakes
+**Problem:** Need to track content and detect changes
 
-**Solution:** Automated tools
-- Auto-detect next folder number
-- Auto-rename files to proper format
-- Auto-update media-list.csv
-- Validation and error checking
+**Solution:** JSON database with MD5 hashes
+- Tracks all content metadata
+- Detects file modifications
+- Ensures data integrity
+- No need for separate CSV files
 
 ### Text-to-Speech Tools
 

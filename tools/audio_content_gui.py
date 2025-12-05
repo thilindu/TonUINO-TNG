@@ -2,6 +2,21 @@
 """
 TonUINO Audio Content Manager - GUI
 A graphical interface for managing audio content on TonUINO SD cards
+
+Features:
+- Browse and display existing audio content from SD card
+- Add new content with auto-numbering
+- Delete content from both filesystem and database
+- Track file integrity using MD5 hashes
+- Synchronize database with actual files
+- Color-coded status indicators:
+  * Green (✅ Synced): Files match database and hashes
+  * Orange (⚠️ Modified): Files changed since last sync
+  * Orange (⚠️ Mismatch): Track count doesn't match database
+  * Red (❌ Not in DB): Folder exists but not in database
+
+Database:
+- .tonuino_hash.json: Primary database with hash tracking and track details
 """
 
 import os
@@ -11,8 +26,10 @@ import shutil
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 import threading
+import hashlib
+import json
 
 
 class TonUINOContentManager:
@@ -26,7 +43,10 @@ class TonUINOContentManager:
         self.script_dir = Path(__file__).parent.absolute()
         self.project_root = self.script_dir.parent
         self.sd_card_dir = self.project_root / "sd-card-englisch"
-        self.media_list_file = self.project_root / "media-list.csv"
+        self.database_file = self.project_root / ".tonuino_hash.json"
+        
+        # Database cache
+        self.audio_database = {}
         
         # Variables
         self.content_path = tk.StringVar()
@@ -36,8 +56,14 @@ class TonUINOContentManager:
         self.auto_folder = tk.BooleanVar(value=True)
         self.sd_dir_path = tk.StringVar(value=str(self.sd_card_dir))
         
+        # Setup UI first (needed for logging)
         self.setup_ui()
         self.update_next_folder()
+        
+        # Load existing data after UI is ready
+        self.load_database()
+        self.verify_sync_silent()
+        self.refresh_content_list()
         
     def setup_ui(self):
         """Setup the user interface"""
@@ -56,6 +82,56 @@ class TonUINOContentManager:
         title_label = ttk.Label(main_frame, text="TonUINO Audio Content Manager", 
                                font=('Helvetica', 16, 'bold'))
         title_label.grid(row=row, column=0, columnspan=3, pady=(0, 20))
+        row += 1
+        
+        # Existing Content Browser
+        ttk.Label(main_frame, text="Existing Content", 
+                 font=('Helvetica', 12, 'bold')).grid(row=row, column=0, columnspan=3, 
+                                                       sticky=tk.W, pady=(0, 5))
+        row += 1
+        
+        # Create frame for treeview and scrollbar
+        tree_frame = ttk.Frame(main_frame)
+        tree_frame.grid(row=row, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
+        tree_frame.columnconfigure(0, weight=1)
+        tree_frame.rowconfigure(0, weight=1)
+        
+        # Treeview for existing content
+        columns = ('Folder', 'Type', 'Tracks', 'Status')
+        self.content_tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings', height=6)
+        
+        self.content_tree.heading('#0', text='Name')
+        self.content_tree.heading('Folder', text='Folder')
+        self.content_tree.heading('Type', text='Type')
+        self.content_tree.heading('Tracks', text='Tracks')
+        self.content_tree.heading('Status', text='Status')
+        
+        self.content_tree.column('#0', width=250)
+        self.content_tree.column('Folder', width=60, anchor='center')
+        self.content_tree.column('Type', width=80, anchor='center')
+        self.content_tree.column('Tracks', width=60, anchor='center')
+        self.content_tree.column('Status', width=100, anchor='center')
+        
+        # Scrollbar
+        tree_scroll = ttk.Scrollbar(tree_frame, orient='vertical', command=self.content_tree.yview)
+        self.content_tree.configure(yscrollcommand=tree_scroll.set)
+        
+        self.content_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        tree_scroll.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        
+        # Buttons for content management
+        content_button_frame = ttk.Frame(main_frame)
+        content_button_frame.grid(row=row+1, column=0, columnspan=3, pady=5)
+        
+        ttk.Button(content_button_frame, text="Refresh", command=self.refresh_content_list).pack(side=tk.LEFT, padx=5)
+        ttk.Button(content_button_frame, text="Delete Selected", command=self.delete_selected_content).pack(side=tk.LEFT, padx=5)
+        ttk.Button(content_button_frame, text="Verify Sync", command=self.verify_sync).pack(side=tk.LEFT, padx=5)
+        
+        row += 2
+        
+        # Separator
+        ttk.Separator(main_frame, orient='horizontal').grid(
+            row=row, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
         row += 1
         
         # Content Selection
@@ -185,6 +261,204 @@ class TonUINOContentManager:
             style.theme_use('clam')
         except:
             pass
+    
+    def calculate_hash(self, filepath: Path) -> str:
+        """Calculate MD5 hash of a file"""
+        hash_md5 = hashlib.md5()
+        try:
+            with open(filepath, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            return hash_md5.hexdigest()
+        except Exception as e:
+            return ""
+    
+    def calculate_folder_hash(self, folder: Path) -> str:
+        """Calculate combined hash of all MP3 files in a folder"""
+        hash_md5 = hashlib.md5()
+        mp3_files = sorted(folder.glob("*.mp3"))
+        
+        for mp3_file in mp3_files:
+            # Include filename and file hash
+            hash_md5.update(mp3_file.name.encode())
+            file_hash = self.calculate_hash(mp3_file)
+            hash_md5.update(file_hash.encode())
+        
+        return hash_md5.hexdigest()
+    
+    def load_database(self):
+        """Load audio content database from JSON file"""
+        if self.database_file.exists():
+            try:
+                with open(self.database_file, 'r', encoding='utf-8') as f:
+                    self.audio_database = json.load(f)
+            except Exception as e:
+                self.audio_database = {}
+        else:
+            self.audio_database = {}
+    
+    def save_database(self):
+        """Save database to JSON file"""
+        try:
+            with open(self.database_file, 'w', encoding='utf-8') as f:
+                json.dump(self.audio_database, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            self.log(f"Failed to save database: {e}", "ERROR")
+    
+    def refresh_content_list(self):
+        """Refresh the content list display"""
+        # Clear existing items
+        for item in self.content_tree.get_children():
+            self.content_tree.delete(item)
+        
+        sd_dir = Path(self.sd_dir_path.get())
+        if not sd_dir.exists():
+            return
+        
+        # Scan folders
+        folders = sorted([d for d in sd_dir.iterdir() if d.is_dir() and d.name.isdigit() and len(d.name) == 2])
+        
+        for folder in folders:
+            folder_num = folder.name
+            mp3_files = list(folder.glob("*.mp3"))
+            track_count = len(mp3_files)
+            
+            # Get info from database
+            if folder_num in self.audio_database:
+                db_info = self.audio_database[folder_num]
+                name = db_info['name']
+                content_type = db_info['type']
+                db_track_count = db_info.get('track_count', len(db_info.get('tracks', [])))
+                
+                # Check sync status
+                folder_hash = self.calculate_folder_hash(folder)
+                stored_hash = db_info.get('hash', '')
+                
+                if folder_hash != stored_hash:
+                    status = "⚠️ Modified"
+                    tag = 'modified'
+                elif track_count != db_track_count:
+                    status = "⚠️ Mismatch"
+                    tag = 'mismatch'
+                else:
+                    status = "✅ Synced"
+                    tag = 'synced'
+            else:
+                name = f"Folder {folder_num}"
+                content_type = "unknown"
+                status = "❌ Not in DB"
+                tag = 'not_in_db'
+            
+            # Insert into treeview
+            item = self.content_tree.insert('', 'end', text=name, 
+                                           values=(folder_num, content_type, track_count, status),
+                                           tags=(tag,))
+        
+        # Configure tags
+        self.content_tree.tag_configure('synced', foreground='green')
+        self.content_tree.tag_configure('modified', foreground='orange')
+        self.content_tree.tag_configure('mismatch', foreground='orange')
+        self.content_tree.tag_configure('not_in_db', foreground='red')
+    
+    def verify_sync(self):
+        """Verify synchronization between files and database"""
+        self.log("=" * 60)
+        self.log("Verifying synchronization...")
+        
+        sd_dir = Path(self.sd_dir_path.get())
+        if not sd_dir.exists():
+            self.log("SD card directory not found", "WARNING")
+            return
+        
+        folders = sorted([d for d in sd_dir.iterdir() if d.is_dir() and d.name.isdigit() and len(d.name) == 2])
+        
+        synced = 0
+        modified = 0
+        not_in_db = 0
+        
+        for folder in folders:
+            folder_num = folder.name
+            folder_hash = self.calculate_folder_hash(folder)
+            
+            if folder_num in self.audio_database:
+                stored_hash = self.audio_database[folder_num].get('hash', '')
+                if folder_hash == stored_hash:
+                    synced += 1
+                else:
+                    modified += 1
+                    self.log(f"Folder {folder_num}: Modified", "WARNING")
+            else:
+                not_in_db += 1
+                self.log(f"Folder {folder_num}: Not in database", "ERROR")
+        
+        self.log(f"Synced: {synced}, Modified: {modified}, Not in DB: {not_in_db}", "INFO")
+        self.log("=" * 60)
+        
+        self.refresh_content_list()
+    
+    def verify_sync_silent(self):
+        """Verify synchronization without logging (for startup)"""
+        sd_dir = Path(self.sd_dir_path.get())
+        if not sd_dir.exists():
+            return
+        
+        folders = sorted([d for d in sd_dir.iterdir() if d.is_dir() and d.name.isdigit() and len(d.name) == 2])
+        
+        for folder in folders:
+            folder_num = folder.name
+            folder_hash = self.calculate_folder_hash(folder)
+            mp3_files = list(folder.glob("*.mp3"))
+            
+            # Update hash if folder is in database but hash is missing/wrong
+            if folder_num in self.audio_database:
+                db_info = self.audio_database[folder_num]
+                if db_info.get('hash') != folder_hash:
+                    db_info['hash'] = folder_hash
+                    db_info['track_count'] = len(mp3_files)
+        
+        self.save_database()
+    
+    def delete_selected_content(self):
+        """Delete selected content from both filesystem and database"""
+        selection = self.content_tree.selection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select content to delete")
+            return
+        
+        item = self.content_tree.item(selection[0])
+        folder_num = item['values'][0]
+        name = item['text']
+        
+        result = messagebox.askyesno(
+            "Confirm Delete",
+            f"Delete folder {folder_num} ({name})?\n\nThis will remove:\n"
+            f"- All MP3 files in the folder\n"
+            f"- Database entries\n\nThis cannot be undone!"
+        )
+        
+        if not result:
+            return
+        
+        try:
+            # Delete folder
+            sd_dir = Path(self.sd_dir_path.get())
+            folder_path = sd_dir / folder_num
+            if folder_path.exists():
+                shutil.rmtree(folder_path)
+                self.log(f"Deleted folder {folder_num}", "SUCCESS")
+            
+            # Remove from database
+            if folder_num in self.audio_database:
+                del self.audio_database[folder_num]
+                self.save_database()
+                self.log(f"Removed {folder_num} from database", "SUCCESS")
+            
+            # Refresh display
+            self.refresh_content_list()
+            
+        except Exception as e:
+            self.log(f"Error deleting content: {e}", "ERROR")
+            messagebox.showerror("Error", f"Failed to delete content:\n{e}")
             
     def browse_file(self):
         """Browse for a single MP3 file"""
@@ -364,33 +638,39 @@ class TonUINOContentManager:
                 
         return copied_count
         
-    def update_media_list(self, folder_num: int, content_type: str, 
-                         content_name: str, track_count: int):
-        """Update the media-list.csv file"""
-        # Create CSV if it doesn't exist
-        if not self.media_list_file.exists():
-            with open(self.media_list_file, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                writer.writerow(['Folder', 'Index', 'Type', 'Track'])
-                
-        # Add entries for each track
-        with open(self.media_list_file, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
+    def update_database(self, folder_num: int, content_type: str, 
+                       content_name: str, track_count: int, folder_hash: str):
+        """Update the database with content information"""
+        folder_str = f"{folder_num:02d}"
+        
+        # Build track list
+        tracks = []
+        for i in range(1, track_count + 1):
+            index_str = f"{i:04d}"
             
-            for i in range(1, track_count + 1):
-                folder_str = f"{folder_num:02d}"
-                index_str = f"{i:04d}"
-                
-                if track_count == 1:
-                    track_name = content_name
-                elif content_type == "audiobook":
-                    track_name = f"{content_name} - Chapter {i}"
-                else:
-                    track_name = f"{content_name} - Track {i}"
-                    
-                writer.writerow([folder_str, index_str, content_type, track_name])
-                
-        self.log(f"Updated media-list.csv with {track_count} entries", "SUCCESS")
+            if track_count == 1:
+                track_name = content_name
+            elif content_type == "audiobook":
+                track_name = f"{content_name} - Chapter {i}"
+            else:
+                track_name = f"{content_name} - Track {i}"
+            
+            tracks.append({
+                'index': index_str,
+                'name': track_name
+            })
+        
+        # Update database entry
+        self.audio_database[folder_str] = {
+            'name': content_name,
+            'type': content_type,
+            'track_count': track_count,
+            'hash': folder_hash,
+            'tracks': tracks
+        }
+        
+        self.save_database()
+        self.log(f"Updated database with {track_count} track(s)", "SUCCESS")
         
     def add_content(self):
         """Main function to add content"""
@@ -441,9 +721,13 @@ class TonUINOContentManager:
                 
             self.log(f"Successfully copied {track_count} track(s)", "SUCCESS")
             
-            # Update media list
-            self.log("Updating media-list.csv...")
-            self.update_media_list(folder_num, content_type, content_name, track_count)
+            # Calculate hash and update database
+            self.log("Calculating hash and updating database...")
+            folder_hash = self.calculate_folder_hash(dest_folder)
+            self.update_database(folder_num, content_type, content_name, track_count, folder_hash)
+            
+            # Refresh display
+            self.refresh_content_list()
             
             # Success message
             self.log("=" * 60)

@@ -1,0 +1,14 @@
+{
+  "01": {
+    "hash": "ff4666baf74e9505e9010a7bd85f3a31",
+    "name": "the gruffalo",
+    "type": "single",
+    "tracks": [
+      {
+        "index": "0001",
+        "name": "the gruffalo"
+      }
+    ],
+    "track_count": 1
+  }
+}

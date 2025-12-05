@@ -1,12 +1,13 @@
 # TonUINO Audio Content Manager - GUI
 
-A simple graphical user interface for managing audio content on TonUINO SD cards.
+A powerful graphical user interface for managing audio content on TonUINO SD cards with database tracking and file integrity verification.
 
 ![TonUINO GUI](https://img.shields.io/badge/Python-3.6+-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-green.svg)
 
 ## Features
 
+### Core Features
 - 🎨 **User-Friendly Interface** - Easy-to-use graphical interface
 - 📁 **File Browser** - Select files or folders with built-in browser
 - 🔢 **Auto-Numbering** - Automatically detects next available folder
@@ -15,6 +16,21 @@ A simple graphical user interface for managing audio content on TonUINO SD cards
 - 📊 **Real-Time Log** - See progress and status messages
 - ✅ **Validation** - Built-in validation for all inputs
 - 🎯 **No Dependencies** - Uses built-in Python tkinter (no pip install needed)
+
+### New Database Features
+- 📚 **Content Browser** - View all existing audio content at a glance
+- 🔍 **Status Monitoring** - Real-time sync status for each folder
+  - ✅ **Synced**: Files match database and hash records
+  - ⚠️ **Modified**: Files changed since last sync
+  - ⚠️ **Mismatch**: Track count doesn't match database
+  - ❌ **Not in DB**: Folder exists but not tracked in database
+- 🔐 **Hash Tracking** - MD5 hash verification for file integrity
+- 🗑️ **Delete Content** - Remove content from both filesystem and database
+- 🔄 **Verify Sync** - Check synchronization between files and database
+- 💾 **Persistent Tracking** - Maintains `.tonuino_hash.json` for integrity checks
+
+### Database Files
+- **.tonuino_hash.json**: Primary database with all content metadata and integrity hashes
 
 ## Screenshots
 
@@ -109,16 +125,34 @@ Make the file executable and double-click `audio_content_gui.py`
 
 ### Step-by-Step Guide
 
+#### Viewing Existing Content
+
 1. **Launch the Application**
    ```bash
    ./launch_gui.sh
    ```
 
-2. **Select Your Content**
+2. **Browse Existing Content**
+   - The top section displays all existing audio content
+   - See folder number, type, track count, and sync status
+   - Color-coded status indicators:
+     - **✅ Synced** (Green): Everything matches
+     - **⚠️ Modified** (Orange): Files changed after adding
+     - **⚠️ Mismatch** (Orange): Track count mismatch
+     - **❌ Not in DB** (Red): Folder not tracked
+
+3. **Manage Existing Content**
+   - **Refresh**: Update the content list
+   - **Delete Selected**: Remove content (files + database entries)
+   - **Verify Sync**: Check file integrity across all folders
+
+#### Adding New Content
+
+1. **Select Your Content**
    - Click "Browse File" to select a single MP3 file
    - OR click "Browse Folder" to select a folder containing multiple MP3s
 
-3. **Enter Content Information**
+2. **Enter Content Information**
    - **Name**: Enter a descriptive name (e.g., "Harry Potter Book 1")
    - **Type**: Select content type:
      - **Audiobook** - Multi-chapter books with progress saving
@@ -126,23 +160,36 @@ Make the file executable and double-click `audio_content_gui.py`
      - **Story** - Individual stories
      - **Single** - Single tracks
 
-4. **Configure Folder**
+3. **Configure Folder**
    - Leave "Auto-detect next available folder" checked (recommended)
    - OR uncheck and manually enter a folder number (1-99)
    - Verify the SD card directory path is correct
 
-5. **Add Content**
+4. **Add Content**
    - Click "Add Content" button
    - Watch the log for progress
    - If folder exists, you'll be asked to confirm overwrite
 
-6. **Success!**
+5. **Success!**
    - The log will show success message
    - Files are copied and renamed automatically
    - media-list.csv is updated
+   - Hash is calculated and saved
+   - Content list is refreshed
    - Ready for next content!
 
 ## Interface Elements
+
+### Existing Content Browser
+- **Tree View** - Displays all folders with content information
+- **Name Column** - Content name from database
+- **Folder Column** - Folder number (01-99)
+- **Type Column** - Content type (audiobook/album/story/single)
+- **Tracks Column** - Number of MP3 files
+- **Status Column** - Sync status with color indicators
+- **Refresh Button** - Reload content list
+- **Delete Selected** - Remove selected content
+- **Verify Sync** - Check integrity of all content
 
 ### Content Selection
 - **Browse File** - Select a single MP3 file
@@ -171,6 +218,64 @@ Real-time status messages with color coding:
 - ❌ **Red** - Error messages
 
 ## Features in Detail
+
+### Database & Hash Tracking
+
+#### JSON Database (.tonuino_hash.json)
+Unified database tracking all content with integrity verification:
+```json
+{
+  "01": {
+    "name": "the gruffalo",
+    "type": "single",
+    "track_count": 1,
+    "hash": "ff4666baf74e9505e9010a7bd85f3a31",
+    "tracks": [
+      {
+        "index": "0001",
+        "name": "the gruffalo"
+      }
+    ]
+  },
+  "03": {
+    "name": "Harry Potter Book 1",
+    "type": "audiobook",
+    "track_count": 12,
+    "hash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+    "tracks": [
+      {
+        "index": "0001",
+        "name": "Harry Potter Book 1 - Chapter 1"
+      },
+      {
+        "index": "0002",
+        "name": "Harry Potter Book 1 - Chapter 2"
+      }
+    ]
+  }
+}
+```
+
+**Fields:**
+- **name**: Content display name
+- **type**: Content type (audiobook/album/story/single)
+- **track_count**: Number of MP3 files
+- **hash**: MD5 hash of all files for integrity checking
+- **tracks**: Array of track information with index and name
+
+#### Sync Status Detection
+The app automatically detects:
+- **✅ Synced**: Hash matches, files unchanged
+- **⚠️ Modified**: Hash mismatch, files were modified
+- **⚠️ Mismatch**: Track count different from database
+- **❌ Not in DB**: Folder exists but not tracked
+
+#### Content Deletion
+Safe deletion process:
+1. Confirms with user before deletion
+2. Removes folder and all MP3 files
+3. Updates .tonuino_hash.json (removes entry)
+4. Refreshes display
 
 ### Auto-Naming
 When you select a file or folder, the name field is automatically filled:
@@ -202,14 +307,7 @@ If a folder already exists:
 - Shows confirmation dialog
 - Allows you to cancel or proceed
 - Safely removes old content before adding new
-
-### CSV Management
-Automatically updates `media-list.csv`:
-```csv
-Folder,Index,Type,Track
-03,0001,audiobook,"Harry Potter Book 1 - Chapter 1"
-03,0002,audiobook,"Harry Potter Book 1 - Chapter 2"
-03,0003,audiobook,"Harry Potter Book 1 - Chapter 3"
+- Updates hash after successful addition
 ```
 
 ## Examples
