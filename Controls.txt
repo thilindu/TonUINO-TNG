@@ -1,5 +1,0 @@
-Long press play/pause: shutdown
-If the same RFID is delected it will resume to play 
-A0: play/pause
-A1: Up 
-A2: Down 
