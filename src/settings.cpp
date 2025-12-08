@@ -91,8 +91,9 @@ void Settings::loadSettingsFromFlash() {
   if (cookie != cardCookie)
     resetSettings();
 
-  if (pauseWhenCardRemoved == 255) {
-    pauseWhenCardRemoved = 0;
+  // Force pauseWhenCardRemoved to always be enabled
+  if (pauseWhenCardRemoved != 1) {
+    pauseWhenCardRemoved = 1;
     writeSettingsToFlash();
   }
 

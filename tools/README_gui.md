@@ -9,13 +9,13 @@ A powerful graphical user interface for managing audio content on TonUINO SD car
 
 ### Core Features
 - 🎨 **User-Friendly Interface** - Easy-to-use graphical interface
-- 📁 **File Browser** - Select files or folders with built-in browser
+- 📁 **File Browser** - Select MP3 or AAX files/folders with built-in browser
 - 🔢 **Auto-Numbering** - Automatically detects next available folder
 - ✏️ **Content Types** - Support for audiobooks, albums, stories, and singles
-- 📝 **Auto-Update CSV** - Automatically updates media-list.csv
+- 📚 **AAX Support** - Convert Audible audiobooks to MP3 automatically
 - 📊 **Real-Time Log** - See progress and status messages
 - ✅ **Validation** - Built-in validation for all inputs
-- 🎯 **No Dependencies** - Uses built-in Python tkinter (no pip install needed)
+- 🎯 **Minimal Dependencies** - Uses built-in Python tkinter
 
 ### New Database Features
 - 📚 **Content Browser** - View all existing audio content at a glance
@@ -28,6 +28,14 @@ A powerful graphical user interface for managing audio content on TonUINO SD car
 - 🗑️ **Delete Content** - Remove content from both filesystem and database
 - 🔄 **Verify Sync** - Check synchronization between files and database
 - 💾 **Persistent Tracking** - Maintains `.tonuino_hash.json` for integrity checks
+
+### AAX Audiobook Features
+- 🎧 **Direct AAX Import** - Load Audible audiobooks directly
+- 🔄 **Automatic Conversion** - Converts AAX to MP3 during import
+- 🔓 **DRM Removal** - Uses activation bytes for DRM removal
+- 📦 **Batch Processing** - Handle multiple AAX files at once
+
+For detailed AAX setup and usage, see [AAX Audiobook Support Guide](README_AAX_SUPPORT.md)
 
 ### Database Files
 - **.tonuino_hash.json**: Primary database with all content metadata and integrity hashes
@@ -68,6 +76,12 @@ A powerful graphical user interface for managing audio content on TonUINO SD car
 - **Python 3.6+** (comes pre-installed on most Linux/macOS systems)
 - **tkinter** (usually included with Python)
 
+### Optional: For AAX Audiobook Support
+- **AAXtoMP3** or **FFmpeg** - Required for converting Audible AAX files
+- **Activation Bytes** - Your Audible account's activation bytes
+
+See [AAX Audiobook Support Guide](README_AAX_SUPPORT.md) for installation instructions.
+
 ### Check Prerequisites
 
 ```bash
@@ -76,6 +90,11 @@ python3 --version
 
 # Check if tkinter is available
 python3 -c "import tkinter; print('tkinter is available')"
+
+# Check if AAX converter is available (optional)
+AAXtoMP3 -version
+# or
+ffmpeg -version
 ```
 
 ### Install Python (if needed)

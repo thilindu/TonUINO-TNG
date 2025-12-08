@@ -109,7 +109,7 @@
  * -1: up/downLong -2: down       -3: downLong
  * number n > 0: Springe im Voice Menü zum n-ten Eintrag und selektiere ihn
  */
-//#define SerialInputAsCommand
+#define SerialInputAsCommand
 
 // ######################################################################
 

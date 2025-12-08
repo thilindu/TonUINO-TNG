@@ -20,12 +20,24 @@ python3 tools/audio_content_gui.py
 
 Done! ✅
 
+## AAX Audiobooks (4 Steps)
+
+1. **Select AAX File** → Click "Browse File" and select .aax file
+2. **Enter Activation Bytes** → Input your 8-character activation bytes
+3. **Enter Name** → Type audiobook name
+4. **Add** → Click "Add Content" (conversion happens automatically)
+
+Get activation bytes: https://github.com/audiamus/AaxAudioConverter
+
+📖 Full guide: [README_AAX_SUPPORT.md](README_AAX_SUPPORT.md)
+
 ## Interface Overview
 
 ```
 ┌──────────────────────────────────────────┐
 │  File/Folder: [path]  [Browse File    ] │
 │                       [Browse Folder  ] │
+│  Activation Bytes: [1a2b3c4d] (for AAX) │
 ├──────────────────────────────────────────┤
 │  Name: [Your Content Name]              │
 │  Type: (•) Audiobook ( ) Album          │
@@ -41,6 +53,13 @@ Done! ✅
 │  ✅ Content added successfully!          │
 └──────────────────────────────────────────┘
 ```
+
+## Supported File Types
+
+| Format | Description | Notes |
+|--------|-------------|-------|
+| **MP3** | Standard audio files | Direct copy |
+| **AAX** | Audible audiobooks | Auto-converts to MP3 |
 
 ## Content Types
 

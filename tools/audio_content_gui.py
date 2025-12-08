@@ -9,6 +9,7 @@ Features:
 - Delete content from both filesystem and database
 - Track file integrity using MD5 hashes
 - Synchronize database with actual files
+- Support for Audible AAX audiobooks with automatic conversion
 - Color-coded status indicators:
   * Green (✅ Synced): Files match database and hashes
   * Orange (⚠️ Modified): Files changed since last sync
@@ -17,6 +18,11 @@ Features:
 
 Database:
 - .tonuino_hash.json: Primary database with hash tracking and track details
+
+AAX Support:
+- Requires AAXtoMP3 or similar converter tool installed
+- Automatically converts AAX files to MP3 format
+- Supports activation bytes for DRM removal
 """
 
 import os
@@ -30,6 +36,8 @@ from typing import List, Optional, Dict, Tuple
 import threading
 import hashlib
 import json
+import subprocess
+import tempfile
 
 
 class TonUINOContentManager:
@@ -55,6 +63,9 @@ class TonUINOContentManager:
         self.folder_number = tk.StringVar()
         self.auto_folder = tk.BooleanVar(value=True)
         self.sd_dir_path = tk.StringVar(value=str(self.sd_card_dir))
+        self.activation_bytes = tk.StringVar()
+        self.is_aax = False
+        self.temp_dir = None
         
         # Setup UI first (needed for logging)
         self.setup_ui()
@@ -150,6 +161,13 @@ class TonUINOContentManager:
         
         ttk.Button(main_frame, text="Browse Folder", 
                   command=self.browse_folder).grid(row=row, column=2, pady=5)
+        row += 1
+        
+        # Activation bytes for AAX (initially hidden)
+        self.activation_label = ttk.Label(main_frame, text="Activation Bytes:")
+        self.activation_entry = ttk.Entry(main_frame, textvariable=self.activation_bytes, width=20)
+        self.activation_info = ttk.Label(main_frame, text="(Required for AAX conversion)", 
+                                        foreground="gray")
         row += 1
         
         # Separator
@@ -478,23 +496,37 @@ class TonUINOContentManager:
             messagebox.showerror("Error", f"Failed to delete content:\n{e}")
             
     def browse_file(self):
-        """Browse for a single MP3 file"""
+        """Browse for a single audio file (MP3 or AAX)"""
         filename = filedialog.askopenfilename(
-            title="Select MP3 File",
-            filetypes=[("MP3 files", "*.mp3"), ("All files", "*.*")]
+            title="Select Audio File",
+            filetypes=[
+                ("Audio files", "*.mp3 *.aax"),
+                ("MP3 files", "*.mp3"), 
+                ("AAX files", "*.aax"),
+                ("All files", "*.*")
+            ]
         )
         if filename:
             self.content_path.set(filename)
+            # Check if AAX file
+            self.check_aax_file(filename)
             if not self.content_name.get():
                 # Auto-fill name from filename
                 name = Path(filename).stem
                 self.content_name.set(name)
             
     def browse_folder(self):
-        """Browse for a folder containing MP3 files"""
-        folder = filedialog.askdirectory(title="Select Folder with MP3 Files")
+        """Browse for a folder containing audio files"""
+        folder = filedialog.askdirectory(title="Select Folder with Audio Files")
         if folder:
             self.content_path.set(folder)
+            # Check if folder contains AAX files
+            folder_path = Path(folder)
+            aax_files = list(folder_path.glob("*.aax")) + list(folder_path.glob("*.AAX"))
+            if aax_files:
+                self.check_aax_file(str(aax_files[0]))
+            else:
+                self.hide_activation_bytes()
             if not self.content_name.get():
                 # Auto-fill name from folder name
                 name = Path(folder).name
@@ -578,6 +610,9 @@ class TonUINOContentManager:
         self.content_name.set("")
         self.content_type.set("audiobook")
         self.auto_folder.set(True)
+        self.activation_bytes.set("")
+        self.is_aax = False
+        self.hide_activation_bytes()
         self.toggle_folder_entry()
         self.clear_log()
         self.log("Form cleared")
@@ -595,15 +630,28 @@ class TonUINOContentManager:
             self.log(f"Content path does not exist: {content}", "ERROR")
             return False
             
-        # Check if it contains MP3 files
+        # Check if it contains audio files (MP3 or AAX)
         if content_path.is_file():
-            if not content.lower().endswith('.mp3'):
-                self.log("Selected file is not an MP3", "ERROR")
+            ext = content.lower()
+            if not (ext.endswith('.mp3') or ext.endswith('.aax')):
+                self.log("Selected file is not an MP3 or AAX file", "ERROR")
                 return False
+            # Check activation bytes for AAX
+            if ext.endswith('.aax'):
+                if not self.activation_bytes.get().strip():
+                    self.log("Activation bytes required for AAX conversion", "ERROR")
+                    self.log("Get activation bytes: https://github.com/audiamus/AaxAudioConverter", "INFO")
+                    return False
         else:
             mp3_files = list(content_path.glob("*.mp3")) + list(content_path.glob("*.MP3"))
-            if not mp3_files:
-                self.log("Selected folder contains no MP3 files", "ERROR")
+            aax_files = list(content_path.glob("*.aax")) + list(content_path.glob("*.AAX"))
+            if not mp3_files and not aax_files:
+                self.log("Selected folder contains no MP3 or AAX files", "ERROR")
+                return False
+            # Check activation bytes if AAX files present
+            if aax_files and not self.activation_bytes.get().strip():
+                self.log("Activation bytes required for AAX conversion", "ERROR")
+                self.log("Get activation bytes: https://github.com/audiamus/AaxAudioConverter", "INFO")
                 return False
                 
         # Check content name
@@ -630,7 +678,7 @@ class TonUINOContentManager:
         return True
         
     def copy_mp3_files(self, source: Path, dest_folder: Path) -> int:
-        """Copy MP3 files to destination folder"""
+        """Copy or convert audio files to destination folder"""
         dest_folder.mkdir(parents=True, exist_ok=True)
         
         track_num = 1
@@ -638,16 +686,41 @@ class TonUINOContentManager:
         
         if source.is_file():
             # Single file
-            dest_file = dest_folder / f"{track_num:04d}.mp3"
-            shutil.copy2(source, dest_file)
-            self.log(f"Copied: {source.name} -> {dest_file.name}")
-            copied_count = 1
+            if source.suffix.lower() == '.aax':
+                # Convert AAX to MP3
+                self.log(f"Converting AAX file: {source.name}")
+                converted_files = self.convert_aax_to_mp3(source)
+                if not converted_files:
+                    self.log("AAX conversion failed", "ERROR")
+                    return 0
+                # Copy converted files
+                for mp3_file in converted_files:
+                    dest_file = dest_folder / f"{track_num:03d}.mp3"
+                    shutil.copy2(mp3_file, dest_file)
+                    self.log(f"Copied: {mp3_file.name} -> {dest_file.name}")
+                    track_num += 1
+                    copied_count += 1
+            else:
+                # Regular MP3 file
+                dest_file = dest_folder / f"{track_num:03d}.mp3"
+                shutil.copy2(source, dest_file)
+                self.log(f"Copied: {source.name} -> {dest_file.name}")
+                copied_count = 1
         else:
-            # Directory - copy all MP3 files in sorted order
+            # Directory - handle both MP3 and AAX files
             mp3_files = sorted(list(source.glob("*.mp3")) + list(source.glob("*.MP3")))
+            aax_files = sorted(list(source.glob("*.aax")) + list(source.glob("*.AAX")))
             
-            for mp3_file in mp3_files:
-                dest_file = dest_folder / f"{track_num:04d}.mp3"
+            # Convert AAX files first
+            for aax_file in aax_files:
+                self.log(f"Converting AAX file: {aax_file.name}")
+                converted_files = self.convert_aax_to_mp3(aax_file)
+                if converted_files:
+                    mp3_files.extend(sorted(converted_files))
+            
+            # Copy all MP3 files in sorted order
+            for mp3_file in sorted(mp3_files):
+                dest_file = dest_folder / f"{track_num:03d}.mp3"
                 shutil.copy2(mp3_file, dest_file)
                 self.log(f"Copied: {mp3_file.name} -> {dest_file.name}")
                 track_num += 1
@@ -663,7 +736,7 @@ class TonUINOContentManager:
         # Build track list
         tracks = []
         for i in range(1, track_count + 1):
-            index_str = f"{i:04d}"
+            index_str = f"{i:03d}"
             
             if track_count == 1:
                 track_name = content_name
@@ -728,20 +801,29 @@ class TonUINOContentManager:
             self.log(f"Removed existing folder {folder_str}", "WARNING")
             
         try:
-            # Copy files
-            self.log("Copying MP3 files...")
+            # Copy/convert files
+            if self.is_aax or any(f.lower().endswith('.aax') for f in [content_path.name] if content_path.is_file()) or \
+               (content_path.is_dir() and any(f.suffix.lower() == '.aax' for f in content_path.glob('*'))):
+                self.log("Processing AAX files (converting to MP3)...")
+            else:
+                self.log("Copying MP3 files...")
+            
             track_count = self.copy_mp3_files(content_path, dest_folder)
             
             if track_count == 0:
-                self.log("No MP3 files were copied", "ERROR")
+                self.log("No audio files were processed", "ERROR")
+                self.cleanup_temp_files()
                 return
                 
-            self.log(f"Successfully copied {track_count} track(s)", "SUCCESS")
+            self.log(f"Successfully processed {track_count} track(s)", "SUCCESS")
             
             # Calculate hash and update database
             self.log("Calculating hash and updating database...")
             folder_hash = self.calculate_folder_hash(dest_folder)
             self.update_database(folder_num, content_type, content_name, track_count, folder_hash)
+            
+            # Clean up temporary files after successful copy
+            self.cleanup_temp_files()
             
             # Refresh display
             self.refresh_content_list()
@@ -773,13 +855,144 @@ class TonUINOContentManager:
             
         except Exception as e:
             self.log(f"Error occurred: {str(e)}", "ERROR")
+            self.cleanup_temp_files()
             messagebox.showerror("Error", f"An error occurred:\n\n{str(e)}")
+    
+    def check_aax_file(self, filepath: str):
+        """Check if file is AAX and show activation bytes field"""
+        if filepath.lower().endswith('.aax'):
+            self.is_aax = True
+            self.show_activation_bytes()
+        else:
+            self.is_aax = False
+            self.hide_activation_bytes()
+    
+    def show_activation_bytes(self):
+        """Show activation bytes input field"""
+        # Find the row after content path
+        self.activation_label.grid(row=8, column=0, sticky=tk.W, pady=5)
+        self.activation_entry.grid(row=8, column=1, sticky=tk.W, pady=5, padx=5)
+        self.activation_info.grid(row=8, column=1, sticky=tk.W, pady=5, padx=(150, 0))
+    
+    def hide_activation_bytes(self):
+        """Hide activation bytes input field"""
+        self.activation_label.grid_remove()
+        self.activation_entry.grid_remove()
+        self.activation_info.grid_remove()
+    
+    def check_aax_converter(self) -> Optional[str]:
+        """Check if AAX converter is available and return the command"""
+        converters = [
+            'AAXtoMP3',
+            'ffmpeg'
+        ]
+        
+        for converter in converters:
+            try:
+                result = subprocess.run([converter, '-version'], 
+                                       capture_output=True, 
+                                       text=True, 
+                                       timeout=5)
+                if result.returncode == 0 or converter == 'ffmpeg':
+                    self.log(f"Found converter: {converter}")
+                    return converter
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                continue
+        
+        return None
+    
+    def convert_aax_to_mp3(self, aax_file: Path) -> List[Path]:
+        """Convert AAX file to MP3 using available converter"""
+        converter = self.check_aax_converter()
+        
+        if not converter:
+            self.log("No AAX converter found. Please install AAXtoMP3 or ffmpeg", "ERROR")
+            self.log("AAXtoMP3: https://github.com/KrumpetPirate/AAXtoMP3", "INFO")
+            self.log("FFmpeg: https://ffmpeg.org/download.html", "INFO")
+            return []
+        
+        # Create temporary directory for conversion
+        if not self.temp_dir:
+            self.temp_dir = tempfile.mkdtemp(prefix="tonuino_aax_")
+        
+        temp_path = Path(self.temp_dir)
+        activation = self.activation_bytes.get().strip()
+        
+        self.log(f"Converting {aax_file.name} with {converter}...")
+        self.log("This may take several minutes depending on file size...")
+        
+        try:
+            if converter == 'AAXtoMP3':
+                # Use AAXtoMP3 converter
+                cmd = [
+                    'AAXtoMP3',
+                    '-A', activation,
+                    '-e:mp3',
+                    '-o', str(temp_path),
+                    str(aax_file)
+                ]
+            else:  # ffmpeg
+                # Use ffmpeg for conversion
+                output_file = temp_path / f"{aax_file.stem}.mp3"
+                cmd = [
+                    'ffmpeg',
+                    '-activation_bytes', activation,
+                    '-i', str(aax_file),
+                    '-vn',  # No video
+                    '-c:a', 'libmp3lame',  # MP3 codec
+                    '-q:a', '2',  # High quality
+                    str(output_file)
+                ]
+            
+            # Run conversion
+            result = subprocess.run(cmd, 
+                                   capture_output=True, 
+                                   text=True, 
+                                   timeout=3600)  # 1 hour timeout
+            
+            if result.returncode != 0:
+                self.log(f"Conversion failed: {result.stderr}", "ERROR")
+                return []
+            
+            # Find converted MP3 files
+            mp3_files = list(temp_path.glob("*.mp3"))
+            
+            if not mp3_files:
+                self.log("No MP3 files found after conversion", "ERROR")
+                return []
+            
+            self.log(f"Successfully converted to {len(mp3_files)} MP3 file(s)", "SUCCESS")
+            return sorted(mp3_files)
+            
+        except subprocess.TimeoutExpired:
+            self.log("Conversion timed out (>1 hour)", "ERROR")
+            return []
+        except Exception as e:
+            self.log(f"Conversion error: {str(e)}", "ERROR")
+            return []
+    
+    def cleanup_temp_files(self):
+        """Clean up temporary conversion files"""
+        if self.temp_dir and Path(self.temp_dir).exists():
+            try:
+                shutil.rmtree(self.temp_dir)
+                self.log("Cleaned up temporary files")
+            except Exception as e:
+                self.log(f"Failed to clean up temp files: {e}", "WARNING")
+            self.temp_dir = None
 
 
 def main():
     """Main entry point"""
     root = tk.Tk()
     app = TonUINOContentManager(root)
+    
+    # Cleanup on exit
+    def on_closing():
+        app.cleanup_temp_files()
+        root.destroy()
+    
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
 
 

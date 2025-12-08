@@ -12,15 +12,16 @@ Our graphical interface now includes powerful features to make content managemen
 - **🎨 Modern Interface** - Clean, intuitive design with real-time feedback
 - **🔄 Auto-Detection** - Automatically finds the next available folder number
 - **📝 Smart Naming** - Auto-fills content names from folder/file names
+- **📚 AAX Audiobook Support** - Import Audible audiobooks with automatic conversion
 - **📊 Live Logging** - Color-coded progress messages with emojis for easy tracking
   - ✅ Success messages in green
   - ❌ Errors in red
   - ⚠️ Warnings in orange
   - ℹ️ Info messages in black
 - **🎯 Validation** - Real-time input validation prevents common mistakes
-- **💾 CSV Auto-Update** - Automatically maintains media-list.csv
+- **💾 Database Tracking** - Maintains .tonuino_hash.json with MD5 integrity checks
 - **🔀 Flexible Paths** - Choose custom SD card locations on-the-fly
-- **🎵 Multi-Type Support** - Handles audiobooks, albums, stories, and singles
+- **🎵 Multi-Format Support** - Handles MP3 and AAX audiobook files
 
 ### CLI Enhancements
 The command-line tool now supports:
@@ -52,14 +53,18 @@ Text-to-speech tools have been enhanced with:
 **Features:**
 - ✅ User-friendly graphical interface
 - ✅ Browse existing content with sync status
-- ✅ File/folder browser
+- ✅ File/folder browser for MP3 and AAX files
 - ✅ Auto-numbering and validation
 - ✅ Real-time log viewer
 - ✅ Hash-based integrity tracking
-- ✅ No external dependencies
+- ✅ Audible AAX audiobook conversion support
+- ✅ No external dependencies (except AAX converter)
 - ✅ Single JSON database (.tonuino_hash.json)
 
-📖 **Documentation:** [README_gui.md](README_gui.md)  
+📖 **Documentation:** 
+- [GUI User Guide](README_gui.md)
+- [AAX Audiobook Support](README_AAX_SUPPORT.md)
+
 ⚡ **Quick Start:** [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
 
 ---

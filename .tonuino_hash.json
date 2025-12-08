@@ -10,5 +10,17 @@
       }
     ],
     "track_count": 1
+  },
+  "02": {
+    "name": "AllesmeinsundweitereGeschichtenvomkleinenRabenSocke_ep7",
+    "type": "audiobook",
+    "track_count": 1,
+    "hash": "cf459d81d02b3a66657ba8f9584ae868",
+    "tracks": [
+      {
+        "index": "0001",
+        "name": "AllesmeinsundweitereGeschichtenvomkleinenRabenSocke_ep7"
+      }
+    ]
   }
 }
